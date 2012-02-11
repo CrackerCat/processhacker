@@ -354,6 +354,11 @@ PPH_STRING PhGetWindowText(
     );
 
 PHLIBAPI
+PPH_STRING PhGetWindowAppID(
+    __in HWND hwnd
+    );
+
+PHLIBAPI
 VOID PhAddComboBoxStrings(
     __in HWND hWnd,
     __in PWSTR *Strings,

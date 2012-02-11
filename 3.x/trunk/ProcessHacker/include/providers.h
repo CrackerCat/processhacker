@@ -119,6 +119,7 @@ typedef struct _PH_PROCESS_ITEM
 
     PPH_STRING FileName;
     PPH_STRING CommandLine;
+    PPH_STRING AppID;
 
     // File
 

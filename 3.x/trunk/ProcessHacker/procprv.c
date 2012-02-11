@@ -61,6 +61,8 @@
 #include <extmgri.h>
 #include <phplug.h>
 #include <winsta.h>
+#include <shobjidl.h>
+#include <propkey.h>
 
 #define PROCESS_ID_BUCKETS 64
 #define PROCESS_ID_TO_BUCKET_INDEX(ProcessId) (((ULONG)(ProcessId) / 4) & (PROCESS_ID_BUCKETS - 1))
@@ -77,6 +79,7 @@ typedef struct _PH_PROCESS_QUERY_S1_DATA
     PH_PROCESS_QUERY_DATA Header;
 
     PPH_STRING CommandLine;
+    PPH_STRING AppID;
 
     HICON SmallIcon;
     HICON LargeIcon;
@@ -901,6 +904,38 @@ VOID PhpProcessQueryStage1(
 #endif
     }
 
+    // AppID
+    {
+        HANDLE processHandle;
+
+        status = PhOpenProcess(
+            &processHandle,
+            ProcessQueryAccess | PROCESS_VM_READ,
+            processId
+            );
+
+        if (NT_SUCCESS(status))
+        {
+            BOOLEAN isPosix = FALSE;
+            ULONG windowFlags;
+            PPH_STRING appID;
+
+            status = PhGetProcessPebFlag(processHandle, PhpoWindowFlags|(Data->IsWow64 ? PhpoWow64 : 0), &windowFlags);
+            if (NT_SUCCESS(status))
+            {
+                if (windowFlags & STARTF_TITLEISAPPID)
+                {
+                    status = PhGetProcessPebString(processHandle, PhpoWindowTitle|(Data->IsWow64 ? PhpoWow64 : 0), &appID);
+                    if (NT_SUCCESS(status))
+                    {
+                        Data->AppID = appID;
+                    }
+                }
+            }
+            NtClose(processHandle);
+        }
+    }
+
     // Job
     if (processHandleLimited)
     {
@@ -1069,6 +1104,7 @@ VOID PhpFillProcessItemStage1(
     PPH_PROCESS_ITEM processItem = Data->Header.ProcessItem;
 
     processItem->CommandLine = Data->CommandLine;
+    processItem->AppID = Data->AppID;
     processItem->SmallIcon = Data->SmallIcon;
     processItem->LargeIcon = Data->LargeIcon;
     memcpy(&processItem->VersionInfo, &Data->VersionInfo, sizeof(PH_IMAGE_VERSION_INFO));

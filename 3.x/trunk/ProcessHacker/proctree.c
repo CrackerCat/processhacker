@@ -122,6 +122,7 @@ VOID PhInitializeProcessTreeList(
     PhAddTreeNewColumn(hwnd, PHPRTLC_VERSION, FALSE, L"Version", 100, PH_ALIGN_LEFT, -1, 0);
     PhAddTreeNewColumn(hwnd, PHPRTLC_FILENAME, FALSE, L"File Name", 180, PH_ALIGN_LEFT, -1, DT_PATH_ELLIPSIS);
     PhAddTreeNewColumn(hwnd, PHPRTLC_COMMANDLINE, FALSE, L"Command Line", 180, PH_ALIGN_LEFT, -1, 0);
+    PhAddTreeNewColumn(hwnd, PHPRTLC_APPID, FALSE, L"AppID", 150, PH_ALIGN_LEFT, -1, 0);
     PhAddTreeNewColumnEx(hwnd, PHPRTLC_PEAKPRIVATEBYTES, FALSE, L"Peak Private Bytes", 70, PH_ALIGN_RIGHT, -1, DT_RIGHT, TRUE);
     PhAddTreeNewColumnEx(hwnd, PHPRTLC_WORKINGSET, FALSE, L"Working Set", 70, PH_ALIGN_RIGHT, -1, DT_RIGHT, TRUE);
     PhAddTreeNewColumnEx(hwnd, PHPRTLC_PEAKWORKINGSET, FALSE, L"Peak Working Set", 70, PH_ALIGN_RIGHT, -1, DT_RIGHT, TRUE);
@@ -1203,6 +1204,16 @@ BEGIN_SORT_FUNCTION(CommandLine)
 }
 END_SORT_FUNCTION
 
+BEGIN_SORT_FUNCTION(AppID)
+{
+    sortResult = PhCompareStringWithNull(
+        processItem1->AppID,
+        processItem2->AppID,
+        TRUE
+        );
+}
+END_SORT_FUNCTION
+
 BEGIN_SORT_FUNCTION(PeakPrivateBytes)
 {
     sortResult = uintptrcmp(processItem1->VmCounters.PeakPagefileUsage, processItem2->VmCounters.PeakPagefileUsage);
@@ -1693,6 +1704,7 @@ BOOLEAN NTAPI PhpProcessTreeNewCallback(
                         SORT_FUNCTION(Version),
                         SORT_FUNCTION(FileName),
                         SORT_FUNCTION(CommandLine),
+                        SORT_FUNCTION(AppID),
                         SORT_FUNCTION(PeakPrivateBytes),
                         SORT_FUNCTION(WorkingSet),
                         SORT_FUNCTION(PeakWorkingSet),
@@ -1915,6 +1927,16 @@ BOOLEAN NTAPI PhpProcessTreeNewCallback(
                 break;
             case PHPRTLC_COMMANDLINE:
                 getCellText->Text = PhGetStringRefOrEmpty(processItem->CommandLine);
+                break;
+            case PHPRTLC_APPID:
+                {
+                    // print process AppID and window AppID in brackets
+                    PH_STRINGREF procID = PhGetStringRefOrEmpty(processItem->AppID);
+                    PH_STRINGREF winID = PhGetStringRefOrEmpty(PhGetWindowAppID(node->WindowHandle));
+                    if (winID.Length)
+                    winID = PhaFormatString(L"[%s]", winID.Buffer)->sr;
+                    getCellText->Text = PhaFormatString(L"%s%s%s", procID.Buffer, winID.Length ? L" " : L"", winID.Buffer)->sr;
+                }
                 break;
             case PHPRTLC_PEAKPRIVATEBYTES:
                 PhSwapReference2(&node->PeakPrivateBytesText, PhFormatSize(processItem->VmCounters.PeakPagefileUsage, -1));
