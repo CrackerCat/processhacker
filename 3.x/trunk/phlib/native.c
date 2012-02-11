@@ -809,6 +809,106 @@ NTSTATUS PhGetProcessPebString(
 }
 
 /**
+ * Gets a flag stored in a process' parameters structure.
+ *
+ * \param ProcessHandle A handle to a process. The handle must
+ * have PROCESS_QUERY_LIMITED_INFORMATION and PROCESS_VM_READ
+ * access.
+ * \param Offset The flag to retrieve.
+ * \param Flag A variable which receives a pointer to the
+ * requested flag. You must free the flag using
+ * PhDereferenceObject() when you no longer need it.
+ *
+ * \retval STATUS_INVALID_PARAMETER_2 An invalid value was
+ * specified in the Offset parameter.
+ */
+NTSTATUS PhGetProcessPebFlag(
+    __in HANDLE ProcessHandle,
+    __in PH_PEB_OFFSET Offset,
+    __out ULONG *Flag
+    )
+{
+    NTSTATUS status;
+    ULONG flag;
+    ULONG offset;
+
+#define PEB_OFFSET_CASE(Enum, Field) \
+    case Enum: offset = FIELD_OFFSET(RTL_USER_PROCESS_PARAMETERS, Field); break; \
+    case Enum | PhpoWow64: offset = FIELD_OFFSET(RTL_USER_PROCESS_PARAMETERS32, Field); break
+
+    switch (Offset)
+    {
+        PEB_OFFSET_CASE(PhpoFlags, Flags);
+        PEB_OFFSET_CASE(PhpoDebugFlags, DebugFlags);
+        PEB_OFFSET_CASE(PhpoConsoleFlags, ConsoleFlags);
+        PEB_OFFSET_CASE(PhpoWindowFlags, WindowFlags);
+        PEB_OFFSET_CASE(PhpoShowWindowFlags, ShowWindowFlags);
+    default:
+        return STATUS_INVALID_PARAMETER_2;
+    }
+
+    if (!(Offset & PhpoWow64))
+    {
+        PROCESS_BASIC_INFORMATION basicInfo;
+        PVOID processParameters;
+
+        // Get the PEB address.
+        if (!NT_SUCCESS(status = PhGetProcessBasicInformation(ProcessHandle, &basicInfo)))
+            return status;
+
+        // Read the address of the process parameters.
+        if (!NT_SUCCESS(status = PhReadVirtualMemory(
+            ProcessHandle,
+            PTR_ADD_OFFSET(basicInfo.PebBaseAddress, FIELD_OFFSET(PEB, ProcessParameters)),
+            &processParameters,
+            sizeof(PVOID),
+            NULL
+            )))
+            return status;
+
+        // Read the flag.
+        if (!NT_SUCCESS(status = PhReadVirtualMemory(
+            ProcessHandle,
+            PTR_ADD_OFFSET(processParameters, offset),
+            &flag,
+            sizeof(ULONG),
+            NULL
+            )))
+            return status;
+    }
+    else
+    {
+        PVOID peb32;
+        ULONG processParameters32;
+
+        if (!NT_SUCCESS(status = PhGetProcessPeb32(ProcessHandle, &peb32)))
+            return status;
+
+        if (!NT_SUCCESS(status = PhReadVirtualMemory(
+            ProcessHandle,
+            PTR_ADD_OFFSET(peb32, FIELD_OFFSET(PEB32, ProcessParameters)),
+            &processParameters32,
+            sizeof(ULONG),
+            NULL
+            )))
+            return status;
+
+        if (!NT_SUCCESS(status = PhReadVirtualMemory(
+            ProcessHandle,
+            PTR_ADD_OFFSET(processParameters32, offset),
+            &flag,
+            sizeof(ULONG),
+            NULL
+            )))
+            return status;
+    }
+
+    *Flag = flag;
+
+    return status;
+}
+
+/**
  * Gets whether the process is running under the POSIX
  * subsystem.
  *

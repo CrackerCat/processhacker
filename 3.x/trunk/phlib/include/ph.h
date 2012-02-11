@@ -150,10 +150,15 @@ NTSTATUS PhGetProcessImageFileNameWin32(
 /** Specifies a PEB string. */
 typedef enum _PH_PEB_OFFSET
 {
+    PhpoFlags,
+    PhpoDebugFlags,
+    PhpoConsoleFlags,
     PhpoCurrentDirectory,
     PhpoDllPath,
     PhpoImagePathName,
     PhpoCommandLine,
+    PhpoWindowFlags,
+    PhpoShowWindowFlags,
     PhpoWindowTitle,
     PhpoDesktopInfo,
     PhpoShellInfo,
@@ -168,6 +173,13 @@ NTSTATUS PhGetProcessPebString(
     __in HANDLE ProcessHandle,
     __in PH_PEB_OFFSET Offset,
     __out PPH_STRING *String
+    );
+
+PHLIBAPI
+NTSTATUS PhGetProcessPebFlag(
+    __in HANDLE ProcessHandle,
+    __in PH_PEB_OFFSET Offset,
+    __out ULONG *Flag
     );
 
 /**

@@ -128,6 +128,8 @@ VOID WepFillWindowInfo(
     if (!Node->WindowText)
         Node->WindowText = PhReferenceEmptyString();
 
+    Node->WindowAppID = PhGetWindowAppID(hwnd);
+
     threadId = GetWindowThreadProcessId(hwnd, &processId);
     Node->ClientId.UniqueProcess = UlongToHandle(processId);
     Node->ClientId.UniqueThread = UlongToHandle(threadId);

@@ -24,6 +24,8 @@
 #include <phgui.h>
 #include <guisupp.h>
 #include <windowsx.h>
+#include <shobjidl.h>
+#include <propkey.h>
 
 _ChangeWindowMessageFilter ChangeWindowMessageFilter_I;
 _RunFileDlg RunFileDlg;
@@ -439,6 +441,30 @@ PPH_STRING PhGetWindowText(
         PhDereferenceObject(string);
         return NULL;
     }
+}
+
+PPH_STRING PhGetWindowAppID(
+    __in HWND hwnd
+    )
+{
+    PROPVARIANT pv;
+    IPropertyStore *pps;
+    HRESULT hr;
+    PPH_STRING string;
+
+    string = PhCreateStringEx(NULL, 0);
+    hr = SHGetPropertyStoreForWindow(hwnd, &IID_IPropertyStore, (void**)&pps);
+    if (SUCCEEDED(hr) && pps) {
+        memset(&pv, 0, sizeof(PROPVARIANT));
+        if (SUCCEEDED(hr)) {
+            hr = pps->lpVtbl->GetValue(pps, &PKEY_AppUserModel_ID, &pv);
+            if (pv.vt != VT_EMPTY)
+                string = PhCreateString(pv.pwszVal);
+            PropVariantClear(&pv);
+        }
+        pps->lpVtbl->Release(pps);
+    }
+    return string;
 }
 
 VOID PhAddComboBoxStrings(

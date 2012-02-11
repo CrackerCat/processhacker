@@ -75,7 +75,8 @@ VOID WeInitializeWindowTree(
     PhAddTreeNewColumn(hwnd, WEWNTLC_CLASS, TRUE, L"Class", 180, PH_ALIGN_LEFT, 0, 0);
     PhAddTreeNewColumn(hwnd, WEWNTLC_HANDLE, TRUE, L"Handle", 70, PH_ALIGN_LEFT, 1, 0);
     PhAddTreeNewColumn(hwnd, WEWNTLC_TEXT, TRUE, L"Text", 220, PH_ALIGN_LEFT, 2, 0);
-    PhAddTreeNewColumn(hwnd, WEWNTLC_THREAD, TRUE, L"Thread", 150, PH_ALIGN_LEFT, 3, 0);
+    PhAddTreeNewColumn(hwnd, WEWNTLC_APPID, TRUE, L"AppID", 150, PH_ALIGN_LEFT, 3, 0);
+    PhAddTreeNewColumn(hwnd, WEWNTLC_THREAD, TRUE, L"Thread", 150, PH_ALIGN_LEFT, 4, 0);
 
     TreeNew_SetTriState(hwnd, TRUE);
     TreeNew_SetSort(hwnd, 0, NoSortOrder);
@@ -199,6 +200,8 @@ VOID WepDestroyWindowNode(
 
     if (WindowNode->WindowText) PhDereferenceObject(WindowNode->WindowText);
 
+    if (WindowNode->WindowAppID) PhDereferenceObject(WindowNode->WindowAppID);
+
     if (WindowNode->ThreadString) PhDereferenceObject(WindowNode->ThreadString);
 
     PhFree(WindowNode);
@@ -235,6 +238,12 @@ END_SORT_FUNCTION
 BEGIN_SORT_FUNCTION(Text)
 {
     sortResult = PhCompareString(node1->WindowText, node2->WindowText, TRUE);
+}
+END_SORT_FUNCTION
+
+BEGIN_SORT_FUNCTION(AppID)
+{
+    sortResult = PhCompareString(node1->WindowAppID, node2->WindowAppID, TRUE);
 }
 END_SORT_FUNCTION
 
@@ -290,6 +299,7 @@ BOOLEAN NTAPI WepWindowTreeNewCallback(
                         SORT_FUNCTION(Class),
                         SORT_FUNCTION(Handle),
                         SORT_FUNCTION(Text),
+                        SORT_FUNCTION(AppID),
                         SORT_FUNCTION(Thread)
                     };
                     int (__cdecl *sortFunction)(void *, const void *, const void *);
@@ -339,6 +349,9 @@ BOOLEAN NTAPI WepWindowTreeNewCallback(
                 break;
             case WEWNTLC_TEXT:
                 getCellText->Text = PhGetStringRef(node->WindowText);
+                break;
+            case WEWNTLC_APPID:
+                getCellText->Text = PhGetStringRef(node->WindowAppID);
                 break;
             case WEWNTLC_THREAD:
                 if (!node->ThreadString)
