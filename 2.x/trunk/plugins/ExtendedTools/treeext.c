@@ -132,6 +132,26 @@ VOID EtProcessTreeNewInitializing(
     }
 }
 
+static FLOAT PhpCalculateInclusiveGpuUsage(
+    __in PPH_PROCESS_NODE ProcessNode
+    )
+{
+    PET_PROCESS_BLOCK block;
+    FLOAT gpuUsage;
+    ULONG i;	
+
+    block = EtGetProcessBlock(ProcessNode->ProcessItem);
+
+    gpuUsage = block->GpuNodeUsage;
+
+    for (i = 0; i < ProcessNode->Children->Count; i++)
+    {
+        gpuUsage += PhpCalculateInclusiveGpuUsage(ProcessNode->Children->Items[i]);
+    }
+
+    return gpuUsage;
+}
+
 VOID EtProcessTreeNewMessage(
     __in PVOID Parameter
     )
@@ -251,12 +271,21 @@ VOID EtProcessTreeNewMessage(
                 text = PhFormatUInt64(block->ProcessItem->PeakNumberOfThreads, TRUE);
                 break;
             case ETPRTNC_GPU:
-                if (block->GpuNodeUsage >= 0.0001)
                 {
-                    PH_FORMAT format;
+                    FLOAT gpuUsage;
 
-                    PhInitFormatF(&format, block->GpuNodeUsage * 100, 2);
-                    text = PhFormat(&format, 1, 0);
+                    if (processNode->Node.Expanded)
+                        gpuUsage = block->GpuNodeUsage;
+                    else
+                        gpuUsage = PhpCalculateInclusiveGpuUsage(processNode);
+
+                    if (gpuUsage >= 0.0001)
+                    {
+                        PH_FORMAT format;
+
+                        PhInitFormatF(&format, gpuUsage * 100, 2);
+                        text = PhFormat(&format, 1, 0);
+                    }
                 }
                 break;
             case ETPRTNC_GPUDEDICATEDBYTES:
