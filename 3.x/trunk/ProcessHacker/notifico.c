@@ -130,7 +130,7 @@ static VOID PhpBeginBitmap(
 {
     static BOOLEAN initialized = FALSE;
     static HDC hdc;
-    static BITMAPINFOHEADER header;
+    static BITMAPV5HEADER header;
     static HBITMAP bitmap;
     static PVOID bits;
 
@@ -141,12 +141,17 @@ static VOID PhpBeginBitmap(
         screenHdc = GetDC(NULL);
         hdc = CreateCompatibleDC(screenHdc);
 
-        memset(&header, 0, sizeof(BITMAPINFOHEADER));
-        header.biSize = sizeof(BITMAPINFOHEADER);
-        header.biWidth = Width;
-        header.biHeight = Height;
-        header.biPlanes = 1;
-        header.biBitCount = 32;
+        memset(&header, 0, sizeof(BITMAPV5HEADER));
+        header.bV5Size = sizeof(BITMAPV5HEADER);
+        header.bV5Width = Width;
+        header.bV5Height = Height;
+        header.bV5Planes = 1;
+        header.bV5BitCount = 32;
+        header.bV5Compression = BI_BITFIELDS;
+        header.bV5RedMask =  0x00FF0000;
+        header.bV5GreenMask =  0x0000FF00;
+        header.bV5BlueMask =  0x000000FF;
+        header.bV5AlphaMask =  0xFF000000;
         bitmap = CreateDIBSection(screenHdc, (BITMAPINFO *)&header, DIB_RGB_COLORS, &bits, NULL, 0);
 
         ReleaseDC(NULL, screenHdc);
